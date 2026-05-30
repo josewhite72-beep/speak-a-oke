@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d0b2e">
+<title>Speak-a-Oke</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&family=Lexend+Mega:wght@700&family=Nunito:wght@400;700&family=Oswald:wght@400;600&family=Merriweather:wght@400;700&family=Roboto+Mono:wght@400;700&family=Fredoka+One&family=Quicksand:wght@400;600&display=swap">
+<style>
+:root{
+  --bg1:#0d0b2e;--bg2:#1a0e3d;--bg3:#0e1a3d;
+  --surface:rgba(255,255,255,0.06);
+  --surface2:rgba(255,255,255,0.1);
+  --border:rgba(255,255,255,0.12);
+  --accent:#38bdf8;--accent2:#a78bfa;
+  --text:#f1f5f9;--text-dim:#7c8db5;--text-mid:#a0b0cc;
+  --green:#4ade80;--red:#f87171;--amber:#fbbf24;
+  --tx-color:#ffffff;--tx-font:'Lexend',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:linear-gradient(135deg,var(--bg1) 0%,var(--bg2) 50%,var(--bg3) 100%);
+  color:var(--text);font-family:'Lexend',sans-serif;
+  display:flex;flex-direction:column;height:100dvh;
+}
+
+/* ── TOPBAR ── */
+#topbar{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 14px;
+  background:rgba(0,0,0,0.32);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;flex-wrap:wrap;
+  backdrop-filter:blur(10px);
+}
+#logo{
+  font-family:'Lexend Mega',sans-serif;font-size:.92rem;font-weight:700;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;white-space:nowrap;
+}
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:8px 13px;border-radius:8px;
+  border:1.5px solid var(--border);
+  background:var(--surface);color:var(--text);
+  font-family:'Lexend',sans-serif;font-size:.78rem;font-weight:600;
+  cursor:pointer;transition:all .15s;
+  white-space:nowrap;text-transform:uppercase;letter-spacing:.4px;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn-mic{background:rgba(74,222,128,.15);border-color:var(--green);color:var(--green)}
+.btn-mic.on{background:rgba(248,113,113,.15);border-color:var(--red);color:var(--red);animation:pmics 1.3s infinite}
+@keyframes pmics{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)}50%{box-shadow:0 0 0 8px rgba(248,113,113,0)}}
+.btn-read{background:rgba(56,189,248,.15);border-color:var(--accent);color:var(--accent)}
+.btn-read.on{background:rgba(251,191,36,.15);border-color:var(--amber);color:var(--amber)}
+.btn-clear{border-color:rgba(248,113,113,.25);color:var(--red)}
+.btn-icon{padding:8px 10px;font-size:.9rem}
+
+/* CTRL ROW */
+#ctrlrow{
+  display:flex;align-items:center;gap:7px;
+  width:100%;order:10;flex-wrap:wrap;
+}
+.ctrl-pill{
+  display:flex;align-items:center;gap:6px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:5px 10px;
+}
+.ctrl-pill label{font-size:.66rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.ctrl-pill input[type=range]{accent-color:var(--accent);cursor:pointer}
+.ctrl-pill span.val{font-size:.74rem;color:var(--text-mid);min-width:28px;text-align:right}
+#fs-pill input{width:85px}
+#color-pill{gap:5px}
+.swatch{width:21px;height:21px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
+.swatch:hover,.swatch.active{border-color:#fff;transform:scale(1.15)}
+#font-sel,#voice-sel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);
+  font-family:'Lexend',sans-serif;font-size:.74rem;
+  padding:6px 8px;cursor:pointer;
+}
+#font-sel{max-width:125px}
+#voice-sel{flex:1;min-width:110px}
+
+/* STATUS */
+#statusbar{
+  display:flex;align-items:center;gap:7px;
+  padding:4px 14px;
+  background:rgba(0,0,0,0.2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+#sdot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:background .3s}
+#sdot.active{background:var(--green);animation:blink 1s infinite}
+#sdot.speaking{background:var(--accent)}
+#sdot.translating{background:var(--amber);animation:blink .7s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#stxt{font-size:.72rem;color:var(--text-dim)}
+#wcount{margin-left:auto;font-size:.7rem;color:var(--text-dim)}
+
+/* ── MAIN ── */
+#main{flex:1;overflow-y:auto;padding:18px 18px 6px;display:flex;flex-direction:column;gap:0}
+#transcript{
+  font-size:2.4rem;font-weight:400;line-height:1.55;
+  color:var(--tx-color);font-family:var(--tx-font);
+  white-space:pre-wrap;word-break:break-word;
+  outline:none;caret-color:var(--accent);
+  min-height:40px;transition:font-size .2s,color .2s,font-family .2s;
+}
+#transcript:empty::before{
+  content:attr(data-ph);color:var(--text-dim);
+  font-style:italic;font-weight:300;pointer-events:none;font-family:'Lexend',sans-serif;
+}
+#transcript.edit-on{border:1.5px dashed rgba(251,191,36,.4);border-radius:10px;padding:12px}
+#interim-txt{
+  font-size:2.4rem;font-weight:300;font-style:italic;
+  color:var(--accent2);opacity:.6;line-height:1.55;
+  word-break:break-word;padding:0 0 8px;flex-shrink:0;
+  transition:font-size .2s;font-family:var(--tx-font);min-height:1px;
+}
+
+/* TRANSLATION BOX */
+#trans-box{
+  margin-top:12px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(167,139,250,0.25);
+  border-radius:10px;padding:12px 14px;
+  display:none;
+}
+#trans-box.visible{display:block}
+#trans-label{font-size:.65rem;color:var(--accent2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+#trans-text{
+  font-size:1.4rem;line-height:1.5;color:rgba(167,139,250,0.85);
+  font-family:'Lexend',sans-serif;font-weight:300;
+}
+#trans-text.loading::after{content:'…';animation:dots 1s infinite}
+@keyframes dots{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* BOTTOM BAR */
+#bottombar{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 14px;
+  background:rgba(0,0,0,0.32);
+  border-top:1px solid var(--border);
+  flex-shrink:0;flex-wrap:wrap;
+  backdrop-filter:blur(10px);
+}
+#sp-pill input{width:62px;accent-color:var(--accent2)}
+#edit-btn{
+  font-size:.72rem;color:var(--text-dim);
+  cursor:pointer;display:flex;align-items:center;gap:5px;
+  padding:6px 10px;border-radius:8px;
+  border:1px solid var(--border);background:transparent;
+  transition:all .15s;white-space:nowrap;
+}
+#edit-btn:hover{border-color:var(--amber);color:var(--amber)}
+#edit-btn.on{border-color:var(--amber);color:var(--amber);background:rgba(251,191,36,.08)}
+
+/* ── SESSIONS PANEL ── */
+#sessions-panel{
+  position:fixed;top:0;right:-320px;width:300px;height:100%;
+  background:rgba(10,8,40,0.97);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transition:right .3s;z-index:200;
+  backdrop-filter:blur(12px);
+}
+#sessions-panel.open{right:0}
+#sp-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  font-size:.85rem;font-weight:600;color:var(--accent);
+}
+#sp-close{cursor:pointer;font-size:1.1rem;color:var(--text-dim)}
+#sp-close:hover{color:var(--text)}
+#sp-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.sess-item{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .15s;
+}
+.sess-item:hover{border-color:var(--accent);background:rgba(56,189,248,.06)}
+.sess-date{font-size:.68rem;color:var(--text-dim);margin-bottom:3px}
+.sess-preview{font-size:.8rem;color:var(--text-mid);line-height:1.4;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sess-del{float:right;font-size:.7rem;color:var(--red);padding:2px 6px;border-radius:4px;margin-left:8px}
+.sess-del:hover{background:rgba(248,113,113,.15)}
+#sp-empty{font-size:.8rem;color:var(--text-dim);text-align:center;padding:30px 0;font-style:italic}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:70px;left:50%;
+  transform:translateX(-50%) translateY(14px);
+  background:rgba(10,8,40,0.96);border:1px solid var(--border);
+  color:var(--text);padding:9px 18px;border-radius:30px;
+  font-size:.8rem;opacity:0;pointer-events:none;transition:all .25s;z-index:300;
+  white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── LANDSCAPE MODE ── */
+@media (orientation:landscape) and (max-height:500px){
+  #topbar{padding:6px 12px;gap:6px}
+  #ctrlrow{display:none}
+  #statusbar{padding:3px 12px}
+  #main{padding:10px 14px 4px}
+  #transcript{font-size:1.8rem;line-height:1.45}
+  #interim-txt{font-size:1.8rem}
+  #trans-text{font-size:1rem}
+  #bottombar{padding:6px 12px}
+  .btn{padding:7px 11px;font-size:.75rem}
+  #ls-toggle{display:inline-flex !important}
+}
+#ls-toggle{display:none}
+
+/* FULLSCREEN tweak */
+:fullscreen #topbar,:fullscreen #bottombar{backdrop-filter:none}
+:fullscreen body{background:linear-gradient(135deg,var(--bg1),var(--bg2) 50%,var(--bg3))}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <span id="logo">🎤 Speak-a-Oke</span>
+  <button class="btn btn-mic" id="btn-mic">🎙 <span id="mlbl">Speak</span></button>
+  <button class="btn btn-read" id="btn-read">🔊 Read</button>
+  <button class="btn btn-clear" id="btn-clear">🗑</button>
+  <button class="btn btn-icon" id="btn-translate" title="Translate to Spanish">🌐</button>
+  <button class="btn btn-icon" id="btn-export" title="Export / Copy">📤</button>
+  <button class="btn btn-icon" id="btn-history" title="Session history">📋</button>
+  <button class="btn btn-icon" id="btn-fs" title="Fullscreen">⛶</button>
+  <button class="btn btn-icon" id="ls-toggle" title="Show controls">⚙️</button>
+
+  <div id="ctrlrow">
+    <div class="ctrl-pill" id="fs-pill">
+      <label for="fs">Size</label>
+      <input type="range" id="fs" min="1.2" max="5" step="0.1" value="2.4">
+      <span class="val" id="fsv">2.4</span>
+    </div>
+    <div class="ctrl-pill" id="color-pill">
+      <label>Color</label>
+      <div class="swatch active" style="background:#ffffff" data-color="#ffffff"></div>
+      <div class="swatch" style="background:#fbbf24" data-color="#fbbf24"></div>
+      <div class="swatch" style="background:#4ade80" data-color="#4ade80"></div>
+      <div class="swatch" style="background:#38bdf8" data-color="#38bdf8"></div>
+      <div class="swatch" style="background:#f87171" data-color="#f87171"></div>
+      <div class="swatch" style="background:#c084fc" data-color="#c084fc"></div>
+      <div class="swatch" style="background:#fdba74" data-color="#fdba74"></div>
+      <div class="swatch" style="background:#000;border-color:#555" data-color="#000000"></div>
+    </div>
+    <select id="font-sel">
+      <option value="'Lexend',sans-serif">Lexend</option>
+      <option value="'Nunito',sans-serif">Nunito</option>
+      <option value="'Quicksand',sans-serif">Quicksand</option>
+      <option value="'Fredoka One',cursive">Fredoka One</option>
+      <option value="'Oswald',sans-serif">Oswald</option>
+      <option value="'Merriweather',serif">Merriweather</option>
+      <option value="'Roboto Mono',monospace">Mono</option>
+    </select>
+  </div>
+</div>
+
+<!-- STATUS -->
+<div id="statusbar">
+  <div id="sdot"></div>
+  <span id="stxt">Ready — press Speak</span>
+  <span id="wcount">0 words</span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="transcript" contenteditable="false"
+    data-ph="Press Speak — your words will appear here…"></div>
+  <div id="interim-txt"></div>
+  <div id="trans-box">
+    <div id="trans-label">🌐 Español</div>
+    <div id="trans-text"></div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottombar">
+  <select id="voice-sel"><option>Loading voices…</option></select>
+  <div class="ctrl-pill" id="sp-pill">
+    <label for="spr">Speed</label>
+    <input type="range" id="spr" min="0.5" max="1.8" step="0.05" value="0.9">
+    <span class="val" id="sprv">0.9×</span>
+  </div>
+  <button id="edit-btn"><span id="eico">✏️</span> Edit</button>
+</div>
+
+<!-- SESSIONS PANEL -->
+<div id="sessions-panel">
+  <div id="sp-header">
+    <span>📋 Sessions</span>
+    <span id="sp-close">✕</span>
+  </div>
+  <div id="sp-list"></div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="export-modal" style="
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:250;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+">
+  <div style="
+    background:#12103a;border:1px solid var(--border);border-radius:14px;
+    padding:22px 20px;width:88%;max-width:340px;
+  ">
+    <div style="font-size:.9rem;font-weight:600;color:var(--accent);margin-bottom:16px">📤 Export</div>
+    <button class="btn" id="exp-copy" style="width:100%;margin-bottom:10px;justify-content:center">
+      📋 Copy text to clipboard
+    </button>
+    <button class="btn" id="exp-txt" style="width:100%;margin-bottom:10px;justify-content:center">
+      📄 Download as .txt
+    </button>
+    <button class="btn" id="exp-save" style="width:100%;margin-bottom:16px;justify-content:center;border-color:var(--green);color:var(--green)">
+      💾 Save session to history
+    </button>
+    <button id="exp-cancel" style="
+      width:100%;text-align:center;font-size:.8rem;color:var(--text-dim);
+      cursor:pointer;background:none;border:none;padding:4px;
+    ">Cancel</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// Elements
+const transcript  = $('transcript');
+const interimEl   = $('interim-txt');
+const transBox    = $('trans-box');
+const transText   = $('trans-text');
+const btnMic      = $('btn-mic');
+const btnRead     = $('btn-read');
+const btnClear    = $('btn-clear');
+const btnTranslate= $('btn-translate');
+const btnExport   = $('btn-export');
+const btnHistory  = $('btn-history');
+const btnFs       = $('btn-fs');
+const mlbl        = $('mlbl');
+const sdot        = $('sdot');
+const stxt        = $('stxt');
+const wcount      = $('wcount');
+const voiceSel    = $('voice-sel');
+const spr         = $('spr');
+const sprv        = $('sprv');
+const fs          = $('fs');
+const fsv         = $('fsv');
+const fontSel     = $('font-sel');
+const editBtn     = $('edit-btn');
+const eico        = $('eico');
+const toast       = $('toast');
+const lsToggle    = $('ls-toggle');
+const ctrlrow     = $('ctrlrow');
+
+// State
+let recognition    = null;
+let wantListening  = false;
+let editMode       = false;
+let isSpeaking     = false;
+let translateOn    = false;
+let finalText      = '';
+let sessionSnapshot= '';
+let sessionFinals  = '';
+let translateTimer = null;
+let lsCtrlVisible  = false;
+
+// ── FONT SIZE ──
+fs.addEventListener('input', () => {
+  const v = parseFloat(fs.value).toFixed(1);
+  transcript.style.fontSize = v + 'rem';
+  interimEl.style.fontSize  = v + 'rem';
+  fsv.textContent = v;
+});
+
+// ── FONT COLOR ──
+document.querySelectorAll('.swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    transcript.style.color = sw.dataset.color;
+  });
+});
+
+// ── FONT FAMILY ──
+fontSel.addEventListener('change', () => {
+  transcript.style.fontFamily = fontSel.value;
+  interimEl.style.fontFamily  = fontSel.value;
+});
+
+// ── SPEED ──
+spr.addEventListener('input', () => {
+  sprv.textContent = parseFloat(spr.value).toFixed(2) + '×';
+});
+
+// ── LANDSCAPE CTRL TOGGLE ──
+lsToggle.addEventListener('click', () => {
+  lsCtrlVisible = !lsCtrlVisible;
+  ctrlrow.style.display = lsCtrlVisible ? 'flex' : 'none';
+});
+
+// ── TOAST ──
+let tTimer;
+function showToast(msg, ms=2200) {
+  clearTimeout(tTimer);
+  toast.textContent = msg;
+  toast.classList.add('show');
+  tTimer = setTimeout(() => toast.classList.remove('show'), ms);
+}
+
+// ── STATUS ──
+function setStatus(txt, mode) {
+  stxt.textContent = txt;
+  sdot.className = mode || '';
+}
+
+function updateWC() {
+  const n = finalText.trim().split(/\s+/).filter(Boolean).length;
+  wcount.textContent = n + (n===1?' word':' words');
+}
+
+// ── EDIT MODE ──
+editBtn.addEventListener('click', () => {
+  editMode = !editMode;
+  transcript.contentEditable = editMode ? 'true' : 'false';
+  transcript.classList.toggle('edit-on', editMode);
+  editBtn.classList.toggle('on', editMode);
+  eico.textContent = editMode ? '✅' : '✏️';
+  if (editMode) {
+    if (wantListening) btnMic.click();
+    transcript.focus();
+    setStatus('Edit mode — correct the text','');
+    showToast('Edit mode ON');
+  } else {
+    finalText = transcript.innerText.replace(/\n+/g,' ').trim() + ' ';
+    updateWC();
+    setStatus('Ready','');
+    showToast('Saved ✓');
+    if (translateOn) doTranslate();
+  }
+});
+
+// ── SPEECH RECOGNITION ──
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) {
+  btnMic.disabled = true;
+  setStatus('⚠ Speech recognition requires Chrome or Edge','');
+}
+
+function createRec() {
+  const r = new SR();
+  r.lang = 'en-US';
+  r.continuous = false;
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+  return r;
+}
+
+function startSession() {
+  if (!SR || !wantListening) return;
+  sessionSnapshot = finalText;
+  sessionFinals   = '';
+  recognition     = createRec();
+
+  recognition.onstart = () => setStatus('Listening…','active');
+
+  recognition.onresult = (e) => {
+    let newFinals = '', interim = '';
+    for (let i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) newFinals += e.results[i][0].transcript.trimEnd() + ' ';
+      else interim = e.results[i][0].transcript;
+    }
+    sessionFinals = newFinals;
+    transcript.innerText = sessionSnapshot + sessionFinals;
+    interimEl.textContent = interim;
+    $('main').scrollTop = $('main').scrollHeight;
+    const all = sessionSnapshot + sessionFinals;
+    wcount.textContent = (all.trim().split(/\s+/).filter(Boolean).length) + ' words';
+    // Debounced auto-translate
+    if (translateOn && sessionFinals) {
+      clearTimeout(translateTimer);
+      translateTimer = setTimeout(doTranslate, 1800);
+    }
+  };
+
+  recognition.onend = () => {
+    finalText = sessionSnapshot + sessionFinals;
+    updateWC();
+    interimEl.textContent = '';
+    if (wantListening) setTimeout(startSession, 80);
+    else {
+      setStatus('Ready','');
+      btnMic.classList.remove('on');
+      mlbl.textContent = 'Speak';
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error==='no-speech') { if (wantListening) setTimeout(startSession, 80); return; }
+    if (e.error==='aborted') return;
+    setStatus('⚠ ' + e.error,'');
+    wantListening = false;
+    btnMic.classList.remove('on');
+    mlbl.textContent = 'Speak';
+  };
+
+  try { recognition.start(); }
+  catch(err) { setTimeout(startSession, 300); }
+}
+
+btnMic.addEventListener('click', () => {
+  if (!SR) return;
+  if (wantListening) {
+    wantListening = false;
+    try { recognition.stop(); } catch(e) {}
+    btnMic.classList.remove('on');
+    mlbl.textContent = 'Speak';
+    interimEl.textContent = '';
+    setStatus('Stopped','');
+  } else {
+    wantListening = true;
+    btnMic.classList.add('on');
+    mlbl.textContent = 'Stop';
+    startSession();
+  }
+});
+
+// ── TTS VOICES ──
+const PREF = ['Google US English','Google UK English Female','Google UK English Male',
+  'Samantha','Alex','Karen','Daniel','Moira',
+  'Microsoft Aria','Microsoft Guy','Microsoft Zira','Microsoft David'];
+let voices = [];
+
+function loadVoices() {
+  voices = speechSynthesis.getVoices();
+  if (!voices.length) return;
+  const en = voices.filter(v => v.lang.startsWith('en'));
+  if (!en.length) { voiceSel.innerHTML = '<option>No EN voices</option>'; return; }
+  en.sort((a,b) => {
+    const ap = PREF.findIndex(p => a.name.includes(p));
+    const bp = PREF.findIndex(p => b.name.includes(p));
+    if (ap>-1 && bp===-1) return -1;
+    if (ap===-1 && bp>-1) return 1;
+    if (ap>-1 && bp>-1) return ap-bp;
+    if (a.lang==='en-US' && b.lang!=='en-US') return -1;
+    if (a.lang!=='en-US' && b.lang==='en-US') return 1;
+    return 0;
+  });
+  voiceSel.innerHTML = '';
+  en.forEach(v => {
+    const o = document.createElement('option');
+    o.value = voices.indexOf(v);
+    o.textContent = v.name + ' [' + v.lang + ']';
+    voiceSel.appendChild(o);
+  });
+  voiceSel.selectedIndex = 0;
+}
+loadVoices();
+speechSynthesis.onvoiceschanged = loadVoices;
+
+// ── READ ──
+btnRead.addEventListener('click', () => {
+  if (isSpeaking) { speechSynthesis.cancel(); return; }
+  const txt = finalText.trim();
+  if (!txt) { showToast('Nothing to read yet!'); return; }
+  const u = new SpeechSynthesisUtterance(txt);
+  u.rate = parseFloat(spr.value);
+  u.lang = 'en-US';
+  const vi = parseInt(voiceSel.value);
+  if (!isNaN(vi) && voices[vi]) { u.voice = voices[vi]; u.lang = voices[vi].lang; }
+  u.onstart = () => {
+    isSpeaking = true; btnRead.classList.add('on');
+    btnRead.innerHTML = '⏹ Stop'; setStatus('Reading aloud…','speaking');
+  };
+  u.onend = u.onerror = () => {
+    isSpeaking = false; btnRead.classList.remove('on');
+    btnRead.innerHTML = '🔊 Read'; setStatus('Done','');
+  };
+  speechSynthesis.speak(u);
+});
+
+// ── TRANSLATE ──
+btnTranslate.addEventListener('click', () => {
+  if (!translateOn) {
+    translateOn = true;
+    btnTranslate.style.borderColor = 'var(--accent2)';
+    btnTranslate.style.color       = 'var(--accent2)';
+    transBox.classList.add('visible');
+    if (finalText.trim()) doTranslate();
+    showToast('Translation ON 🌐');
+  } else {
+    translateOn = false;
+    btnTranslate.style.borderColor = '';
+    btnTranslate.style.color       = '';
+    transBox.classList.remove('visible');
+    transText.textContent = '';
+    showToast('Translation OFF');
+  }
+});
+
+async function doTranslate() {
+  const txt = finalText.trim();
+  if (!txt) return;
+  setStatus('Translating…','translating');
+  transText.textContent = '';
+  transText.classList.add('loading');
+  try {
+    const res = await fetch('/api/translate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: txt })
+    });
+    const data = await res.json();
+    transText.classList.remove('loading');
+    if (data.error) {
+      transText.textContent = '⚠ ' + data.error;
+    } else {
+      transText.textContent = data.translation || '⚠ Empty response';
+    }
+    setStatus('Ready','');
+  } catch(err) {
+    transText.classList.remove('loading');
+    transText.textContent = '⚠ Translation unavailable';
+    setStatus('Ready','');
+  }
+}
+
+// ── CLEAR ──
+btnClear.addEventListener('click', () => {
+  if (!confirm('Clear all text?')) return;
+  finalText = ''; sessionSnapshot = ''; sessionFinals = '';
+  transcript.innerText = '';
+  interimEl.textContent = '';
+  transText.textContent = '';
+  updateWC();
+  setStatus('Ready','');
+  showToast('Cleared');
+});
+
+// ── FULLSCREEN ──
+btnFs.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(()=>{});
+    btnFs.textContent = '⊠';
+  } else {
+    document.exitFullscreen();
+    btnFs.textContent = '⛶';
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) btnFs.textContent = '⛶';
+});
+
+// ── EXPORT ──
+const exportModal = $('export-modal');
+btnExport.addEventListener('click', () => {
+  exportModal.style.display = 'flex';
+});
+$('exp-cancel').addEventListener('click', () => exportModal.style.display = 'none');
+exportModal.addEventListener('click', e => { if(e.target===exportModal) exportModal.style.display='none'; });
+
+$('exp-copy').addEventListener('click', async () => {
+  const txt = finalText.trim();
+  if (!txt) { showToast('Nothing to copy!'); return; }
+  try {
+    await navigator.clipboard.writeText(txt);
+    showToast('Copied to clipboard ✓');
+  } catch {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied ✓');
+  }
+  exportModal.style.display = 'none';
+});
+
+$('exp-txt').addEventListener('click', () => {
+  const txt = finalText.trim();
+  if (!txt) { showToast('Nothing to export!'); return; }
+  const date = new Date().toISOString().slice(0,19).replace('T','_').replace(/:/g,'-');
+  const blob = new Blob([txt], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'speak-a-oke_' + date + '.txt';
+  a.click();
+  showToast('Downloaded ✓');
+  exportModal.style.display = 'none';
+});
+
+$('exp-save').addEventListener('click', () => {
+  const txt = finalText.trim();
+  if (!txt) { showToast('Nothing to save!'); return; }
+  saveSession(txt);
+  showToast('Session saved ✓');
+  exportModal.style.display = 'none';
+});
+
+// ── SESSIONS (localStorage) ──
+const SESS_KEY = 'speak_a_oke_sessions';
+
+function getSessions() {
+  try { return JSON.parse(localStorage.getItem(SESS_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveSession(txt) {
+  const sessions = getSessions();
+  sessions.unshift({
+    id: Date.now(),
+    date: new Date().toLocaleString(),
+    text: txt,
+    words: txt.split(/\s+/).filter(Boolean).length
+  });
+  // Keep max 30 sessions
+  if (sessions.length > 30) sessions.pop();
+  localStorage.setItem(SESS_KEY, JSON.stringify(sessions));
+  renderSessions();
+}
+
+function renderSessions() {
+  const list = $('sp-list');
+  const sessions = getSessions();
+  if (!sessions.length) {
+    list.innerHTML = '<div id="sp-empty">No saved sessions yet.<br>Use Export → Save to add one.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  sessions.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'sess-item';
+    item.innerHTML = `
+      <span class="sess-del" data-id="${s.id}">✕</span>
+      <div class="sess-date">${s.date} · ${s.words} words</div>
+      <div class="sess-preview">${s.text.slice(0,120)}${s.text.length>120?'…':''}</div>
+    `;
+    item.addEventListener('click', e => {
+      if (e.target.classList.contains('sess-del')) {
+        deleteSession(s.id); return;
+      }
+      // Load session into transcript
+      if (!confirm('Load this session? Current text will be replaced.')) return;
+      finalText = s.text + ' ';
+      transcript.innerText = s.text;
+      updateWC();
+      $('sessions-panel').classList.remove('open');
+      showToast('Session loaded ✓');
+    });
+    list.appendChild(item);
+  });
+}
+
+function deleteSession(id) {
+  let sessions = getSessions().filter(s => s.id !== id);
+  localStorage.setItem(SESS_KEY, JSON.stringify(sessions));
+  renderSessions();
+}
+
+btnHistory.addEventListener('click', () => {
+  renderSessions();
+  $('sessions-panel').classList.toggle('open');
+});
+$('sp-close').addEventListener('click', () => $('sessions-panel').classList.remove('open'));
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  if (editMode) return;
+  if (e.code==='Space' && e.target.tagName!=='INPUT') { e.preventDefault(); btnMic.click(); }
+  if (e.code==='KeyR' && !e.ctrlKey && !e.metaKey) btnRead.click();
+  if (e.code==='KeyT' && !e.ctrlKey && !e.metaKey) btnTranslate.click();
+  if (e.code==='F11') { e.preventDefault(); btnFs.click(); }
+  if (e.code==='Escape') $('sessions-panel').classList.remove('open');
+});
+
+// Init
+updateWC();
+renderSessions();
+
+// ── SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
