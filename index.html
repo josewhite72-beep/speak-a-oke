@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0d0b2e">
+<link rel="manifest" href="/manifest.json">
 <title>Speak-a-Oke</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&family=Lexend+Mega:wght@700&family=Nunito:wght@400;700&family=Oswald:wght@400;600&family=Merriweather:wght@400;700&family=Roboto+Mono:wght@400;700&family=Fredoka+One&family=Quicksand:wght@400;600&display=swap">
@@ -329,6 +330,17 @@ body{
   </div>
 </div>
 
+<!-- API KEY MODAL -->
+<div id="key-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:260;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:#12103a;border:1px solid rgba(167,139,250,0.4);border-radius:14px;padding:22px 20px;width:88%;max-width:340px;">
+    <div style="font-size:.9rem;font-weight:600;color:var(--accent2);margin-bottom:6px">🔑 DeepSeek API Key</div>
+    <div style="font-size:.73rem;color:var(--text-dim);margin-bottom:14px;line-height:1.5">Saved locally on this device only.<br>Get your key at <span style="color:var(--accent)">platform.deepseek.com</span></div>
+    <input id="key-input" type="password" placeholder="sk-..." style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Lexend,sans-serif;font-size:.82rem;padding:10px 12px;margin-bottom:12px;outline:none;">
+    <button id="key-save" class="btn btn-read" style="width:100%;justify-content:center;margin-bottom:8px">Save &amp; Translate</button>
+    <button id="key-cancel" style="width:100%;text-align:center;font-size:.78rem;color:var(--text-dim);cursor:pointer;background:none;border:none;padding:4px;">Cancel</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -588,9 +600,47 @@ btnRead.addEventListener('click', () => {
   speechSynthesis.speak(u);
 });
 
+// ── API KEY MODAL ──
+const keyModal = $('key-modal');
+const keyInput = $('key-input');
+
+function getKey() { return localStorage.getItem('deepseek_key') || ''; }
+function saveKey(k) { localStorage.setItem('deepseek_key', k.trim()); }
+
+$('key-save').addEventListener('click', () => {
+  const k = keyInput.value.trim();
+  if (!k) { showToast('Enter a valid key'); return; }
+  saveKey(k);
+  keyModal.style.display = 'none';
+  showToast('API key saved ✓');
+  // Proceed with translation now that key is set
+  translateOn = true;
+  btnTranslate.style.borderColor = 'var(--accent2)';
+  btnTranslate.style.color       = 'var(--accent2)';
+  transBox.classList.add('visible');
+  doTranslate();
+});
+$('key-cancel').addEventListener('click', () => {
+  keyModal.style.display = 'none';
+  // revert toggle if no key
+  if (!getKey()) {
+    translateOn = false;
+    btnTranslate.style.borderColor = '';
+    btnTranslate.style.color = '';
+    transBox.classList.remove('visible');
+  }
+});
+keyModal.addEventListener('click', e => { if(e.target===keyModal) $('key-cancel').click(); });
+
 // ── TRANSLATE ──
 btnTranslate.addEventListener('click', () => {
   if (!translateOn) {
+    // Turning ON — check for key first
+    if (!getKey()) {
+      keyInput.value = '';
+      keyModal.style.display = 'flex';
+      return;
+    }
     translateOn = true;
     btnTranslate.style.borderColor = 'var(--accent2)';
     btnTranslate.style.color       = 'var(--accent2)';
@@ -607,29 +657,48 @@ btnTranslate.addEventListener('click', () => {
   }
 });
 
+// Long-press 🌐 to change key
+let keyPressTimer;
+btnTranslate.addEventListener('touchstart', () => {
+  keyPressTimer = setTimeout(() => {
+    keyInput.value = getKey();
+    keyModal.style.display = 'flex';
+  }, 700);
+});
+btnTranslate.addEventListener('touchend', () => clearTimeout(keyPressTimer));
+
 async function doTranslate() {
   const txt = finalText.trim();
   if (!txt) return;
+  const key = getKey();
+  if (!key) return;
   setStatus('Translating…','translating');
   transText.textContent = '';
   transText.classList.add('loading');
   try {
-    const res = await fetch('/api/translate', {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text: txt })
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer ' + key
+      },
+      body: JSON.stringify({
+        model:'deepseek-chat',
+        max_tokens:1000,
+        messages:[
+          { role:'system', content:'You are a translator. Translate English to Spanish (Latin American). Return ONLY the translation, no explanations.' },
+          { role:'user', content: txt }
+        ]
+      })
     });
     const data = await res.json();
+    const spanish = data.choices?.[0]?.message?.content || '';
     transText.classList.remove('loading');
-    if (data.error) {
-      transText.textContent = '⚠ ' + data.error;
-    } else {
-      transText.textContent = data.translation || '⚠ Empty response';
-    }
+    transText.textContent = spanish || '⚠ Empty response';
     setStatus('Ready','');
   } catch(err) {
     transText.classList.remove('loading');
-    transText.textContent = '⚠ Translation unavailable';
+    transText.textContent = '⚠ Translation error — check API key';
     setStatus('Ready','');
   }
 }
@@ -785,13 +854,6 @@ document.addEventListener('keydown', e => {
 // Init
 updateWC();
 renderSessions();
-
-// ── SERVICE WORKER ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>
