@@ -1,4 +1,4 @@
-const CACHE = 'speak-a-oke-v1';
+const CACHE = 'speak-a-oke-v2';
 const STATIC = [
   '/',
   '/index.html',
